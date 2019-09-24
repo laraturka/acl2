@@ -1,14 +1,18 @@
 {
-    "name": "laraturka/acl",
+    "name": "laraturka/acl2",
     "description": "Access Control List for Laravel",
     "license": "MIT",
 
     "support": {
-        "issues": "https://github.com/laraturka/acl/issues",
-        "source": "https://github.com/laraturka/acl"
+        "issues": "https://github.com/laraturka/acl2/issues",
+        "source": "https://github.com/laraturka/acl2"
     },
     "authors": [
         {
+            "name": "Murat Tanriover",
+            "email": "murattanriover@gmail.com"
+        }
+        ,{
             "name": "Kadir YILMAZ",
             "email": "kadir@kadir.info"
         }
