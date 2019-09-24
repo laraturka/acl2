@@ -8,17 +8,22 @@ use Illuminate\Support\Facades\DB;
 class AclPolicy
 {
     use HandlesAuthorization;
+    $site_id = Acl::$site_id;
 
     public function before($user, $gate){
+        $site_id = Acl::$site_id;
+        
     	$count = DB::table('users')
             ->select('acl_gates.*')
-            ->join('acl_user_groups', 'acl_user_groups.user_id', '=', 'users.id')
-            ->join('acl_groups', 'acl_groups.id', '=', 'acl_user_groups.acl_group_id')
+            ->join('user_acl_group_site',function($join) use($site_id){
+                $join->on('user_acl_group_site.user_id','=','users.id')->where(function ($q)use($site_id){$q->where('user_acl_group_site.site_id','=',$site_id)->orWhereNull('user_acl_group_site.site_id');});
+            })
+            ->join('acl_groups', 'acl_groups.id', '=', 'user_acl_group_site.acl_group_id')
             ->join('acl_gates', 'acl_gates.acl_group_id', '=', 'acl_groups.id')
             ->where('users.id', '=', $user->id )
             ->where(function ($q) use($gate) { //Check if name is null or equal
-                $q  ->whereNull('acl_gates.name')
-                    ->orWhere('acl_gates.name', $gate);
+                $q->whereNull('acl_gates.name')
+                  ->orWhere('acl_gates.name', $gate);
             })
             ->count();
 

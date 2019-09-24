@@ -10,6 +10,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 class Acl {
 
     use AclHasGate;
+
+    public static $site_id = null;
     
     static public function getConfigControllerMethods(){
         $all_controllers = config('acl.controllers');
@@ -164,6 +166,7 @@ class Acl {
         }
 
         $id = $user->id;
+        $site_id = Acl::$site_id;
 
         //return if already get
         if(!$force && array_key_exists($id, self::$aclForUser))
@@ -171,9 +174,11 @@ class Acl {
 
         //Controller or method is null means wildcard allowed
         $controllers = DB::table('users')
-            ->join('acl_user_groups', 'acl_user_groups.user_id', '=', 'users.id')
-            ->join('acl_groups', 'acl_groups.id', '=', 'acl_user_groups.acl_group_id')
-            ->join('acl_controllers', 'acl_controllers.acl_group_id', '=', 'acl_user_groups.acl_group_id')
+            ->join('user_acl_group_site',function($join) use($site_id){
+                $join->on('user_acl_group_site.user_id','=','users.id')->where(function ($q)use($site_id){$q->where('user_acl_group_site.site_id','=',$site_id)->orWhereNull('user_acl_group_site.site_id');});
+            })
+            ->join('acl_groups', 'acl_groups.id', '=', 'user_acl_group_site.acl_group_id')
+            ->join('acl_controllers', 'acl_controllers.acl_group_id', '=', 'user_acl_group_site.acl_group_id')
             ->select('acl_controllers.controller','acl_controllers.method')
             ->where('users.id', '=', $id)
             ->get();

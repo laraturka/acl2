@@ -24,6 +24,14 @@ class AclMiddleware
      */
     public function handle($request, Closure $next, $guard = null)
     {
+
+        //Check if domain
+        $site = DB::table('site')->select(['site.id'])->where('domain',$request->server("HTTP_HOST"))->where('status','>=',0)->first();
+        if (is_null($site))
+            abort(404);
+
+        Acl::$site_id = $site->id;
+
         //Get route
         $route = app()->router->getRoutes()->match($request);
 
@@ -43,23 +51,25 @@ class AclMiddleware
         if (!auth()->check()) return $next($request);
 
         //Check if authorized controller and method
-        if (!$this->checkIfAuthorized($controller, $method))
+        if (!$this->checkIfAuthorized($controller, $method,$site->id))
             abort(401, 'Unauthorized.');
 
         //Continue from next onion level
         return $next($request);
     }
 
-    protected function checkIfAuthorized($controller, $method)
+    protected function checkIfAuthorized($controller, $method,$site_id = null)
     {
 
         if (!auth()->check()) return false;
 
         //Controller or method is null means wildcard allowed
         $count = DB::table('users')
-            ->join('acl_user_groups', 'acl_user_groups.user_id', '=', 'users.id')
-            ->join('acl_groups', 'acl_groups.id', '=', 'acl_user_groups.acl_group_id')
-            ->join('acl_controllers', 'acl_controllers.acl_group_id', '=', 'acl_user_groups.acl_group_id')
+            ->join('user_acl_group_site',function($join) use($site_id){
+                $join->on('user_acl_group_site.user_id','=','users.id')->where(function ($q)use($site_id){$q->where('user_acl_group_site.site_id','=',$site_id)->orWhereNull('user_acl_group_site.site_id');});
+            })
+            ->join('acl_groups', 'acl_groups.id', '=', 'user_acl_group_site.acl_group_id')
+            ->join('acl_controllers', 'acl_controllers.acl_group_id', '=', 'user_acl_group_site.acl_group_id')
             ->select('acl_controllers.*')
             ->where('users.id', '=', auth()->user()->id)
             ->where(function ($q) use ($controller) { //Check if controller is null or equal
